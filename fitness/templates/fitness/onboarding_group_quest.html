@@ -1,0 +1,180 @@
+{% extends "fitness/base.html" %}
+{% block content %}
+<section class="onboarding-shell compact">
+  <div class="onboarding-progress"><span class="done">1 안내</span><i></i><span class="done">2 프로필</span><i></i><span class="done">3 운동 방식</span><i></i><span class="active">4 그룹 설정</span></div>
+  <header class="onboarding-heading"><span>PARTY MISSION</span><h1>{{ party.name }} 파티 미션을 어떻게 시작할까요?</h1><p>파티원과 함께 도전할 파티 미션을 설정해보세요.</p></header>
+  
+  {% if existing_quests %}
+    <div class="panel" style="margin-top: 18px; border: 1px solid rgba(56, 189, 248, 0.4); background: rgba(16, 24, 39, 0.85);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 style="font-size: 15px; margin: 0; color: #FFFFFF; display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-list-check" style="color: #38BDF8;"></i>
+          현재 설정된 파티 미션 ({{ existing_quests|length }}개)
+        </h2>
+        <a href="{% url 'dashboard' %}" class="button btn-mint" style="padding: 6px 14px; font-size: 12px; text-decoration: none; font-weight: 800;">
+          설정 완료하고 대시보드로 이동 →
+        </a>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        {% for eq in existing_quests %}
+          <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 10px 14px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 11px; font-weight: 800; background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); padding: 2px 7px; border-radius: 5px;">
+                미션 {{ forloop.counter }}
+              </span>
+              <div>
+                <b style="color: #FFFFFF; font-size: 13.5px;">{{ eq.title }}</b>
+                <small style="color: #94A3B8; display: block; font-size: 11.5px; margin-top: 2px;">
+                  종목: {{ eq.workout_type }} · 목표 시간: {{ eq.target_minutes }}분
+                </small>
+              </div>
+            </div>
+            {% if eq.source == 'DIRECT' %}
+              <form method="post" style="margin: 0;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_quest">
+                <input type="hidden" name="quest_id" value="{{ eq.id }}">
+                <button type="submit" class="button secondary" style="padding: 4px 10px; font-size: 11.5px; color: #EF4444; border-color: rgba(239, 68, 68, 0.35);" title="미션 삭제">
+                  <i class="fa-solid fa-trash-can"></i> 삭제
+                </button>
+              </form>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="solo-options" style="margin-top: 20px;">
+    <details class="panel solo-option" open>
+      <summary><span>✍️</span><strong>파티 일일미션 직접 입력</strong><small>파티원과 함께 할 운동과 목표 시간을 직접 정해요 (원하는 만큼 추가 가능)</small></summary>
+      <form method="post" id="groupQuestForm" style="margin-top: 14px;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="direct">
+        <label for="questTitle">일일미션 이름</label>
+        <input class="input" id="questTitle" name="title" maxlength="100" required placeholder="예: 러닝 30분 또는 저녁 산책">
+        
+        <label for="workoutType">운동 종류</label>
+        <select class="input custom-workout-select" id="workoutType" name="workout_type">
+          <option value="러닝">🏃 러닝</option>
+          <option value="걷기">🚶 산책</option>
+          <option value="수영">🏊 수영</option>
+          <option value="배드민턴">🏸 배드민턴</option>
+          <option value="자전거">🚲 자전거</option>
+          <option value="헬스">🏋️ 헬스</option>
+          <option value="등산">🥾 등산</option>
+          <option value="축구">⚽ 축구</option>
+          <option value="농구">🏀 농구</option>
+          <option value="요가">🧘 요가</option>
+          <option value="기타">✍️ 직접입력</option>
+        </select>
+        <div class="custom-workout-field" hidden>
+          <label for="customWorkoutName">직접 입력할 운동</label>
+          <input class="input" id="customWorkoutName" name="custom_workout_name" maxlength="50" placeholder="예: 필라테스, 탁구, 복싱">
+        </div>
+
+        <label style="display: block; margin-top: 14px; margin-bottom: 8px;">목표 시간</label>
+        <div class="time-category-chips" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+          <button type="button" class="time-chip active" data-mins="30">30분</button>
+          <button type="button" class="time-chip" data-mins="60">1시간</button>
+          <button type="button" class="time-chip" data-mins="90">1시간 30분</button>
+          <button type="button" class="time-chip" data-mins="custom">직접입력</button>
+        </div>
+        <div class="custom-time-wrapper" style="display: none; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input class="input custom-time-input" type="number" min="5" max="300" value="30" placeholder="5~300분" style="max-width: 160px;">
+            <span style="font-weight: 600; color: #94a3b8;">분</span>
+          </div>
+          <small style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">최소 5분에서 최대 300분까지 입력할 수 있어요.</small>
+        </div>
+        <input type="hidden" name="target_minutes" id="targetMinutesField" value="30">
+
+        <div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+          <button class="button secondary" type="submit" name="submit_action" value="add_more" style="flex: 1; border-color: rgba(56, 189, 248, 0.45); color: #38BDF8; font-weight: 800; padding: 10px 16px;">
+            <i class="fa-solid fa-plus"></i> 미션 추가하고 계속 작성
+          </button>
+          <button class="button btn-mint" type="submit" name="submit_action" value="finish" style="flex: 1.2; font-weight: 800; padding: 10px 16px;">
+            <i class="fa-solid fa-check"></i> 파티 미션 완료 (대시보드로) →
+          </button>
+        </div>
+      </form>
+    </details>
+
+    <form method="post" class="panel solo-action">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="ai">
+      <span>✨</span>
+      <h2>AI 협동 미션 팩 추천</h2>
+      <p>파티원 전원이 함께 즐기는 파티 맞춤 협동 미션을 즉시 생성해요.</p>
+      <button class="button" type="submit">AI 파티 미션 팩 시작하기</button>
+    </form>
+
+    <form method="post" class="panel solo-action">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="facility">
+      <span>📍</span>
+      <h2>체육시설 연계 파티 미션</h2>
+      <p>우리 지역 공공체육시설 방문 및 협동 미션을 자동으로 연동하여 시작해요.</p>
+      <button class="button" type="submit">체육시설 파티 미션 시작하기</button>
+    </form>
+  </div>
+</section>
+
+<style>
+.time-chip {
+  padding: 8px 16px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.time-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.time-chip.active {
+  background: var(--neon-mint, #00f59b);
+  border-color: var(--neon-mint, #00f59b);
+  color: #0f172a;
+  font-weight: 700;
+}
+</style>
+
+<script>
+document.querySelectorAll('.custom-workout-select').forEach(select=>{
+  const field=select.parentElement.querySelector('.custom-workout-field'),input=field.querySelector('input');
+  const toggle=()=>{const show=select.value==='기타';field.hidden=!show;input.required=show;if(show)input.focus()};
+  select.addEventListener('change',toggle);
+  toggle();
+});
+
+const chips = document.querySelectorAll('#groupQuestForm .time-chip');
+const customWrapper = document.querySelector('#groupQuestForm .custom-time-wrapper');
+const customInput = document.querySelector('#groupQuestForm .custom-time-input');
+const targetField = document.getElementById('targetMinutesField');
+
+chips.forEach(chip => {
+  chip.addEventListener('click', () => {
+    chips.forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    const mins = chip.getAttribute('data-mins');
+    if (mins === 'custom') {
+      customWrapper.style.display = 'block';
+      customInput.focus();
+      targetField.value = customInput.value || '30';
+    } else {
+      customWrapper.style.display = 'none';
+      targetField.value = mins;
+    }
+  });
+});
+
+customInput.addEventListener('input', () => {
+  targetField.value = customInput.value;
+});
+</script>
+{% endblock %}

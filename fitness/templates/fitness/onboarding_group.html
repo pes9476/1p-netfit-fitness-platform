@@ -1,0 +1,208 @@
+{% extends "fitness/base.html" %}
+{% block content %}
+<section class="onboarding-shell compact">
+  <div class="onboarding-progress"><span class="done">1 안내</span><i></i><span class="done">2 프로필</span><i></i><span class="done">3 솔로·파티</span><i></i><span class="active">4 파티 설정</span></div>
+  <header class="onboarding-heading"><span>PARTY ROOM</span><h1>파티를 만들고 친구를 초대하세요</h1><p>친구가 아직 없다면 닉네임으로 먼저 추가할 수 있어요.</p></header>
+  <!-- 대시보드로 돌아가기: 친구 추가 칸 왼쪽 상단에 위치 -->
+  <div style="margin: 24px 0 14px; display: flex; justify-content: flex-start;">
+    <a class="party-back-button" href="{% url 'dashboard' %}">
+      <i class="fa-solid fa-arrow-left"></i> 대시보드로 돌아가기
+    </a>
+  </div>
+
+  <!-- 친구 추가 카드 (2번째 사진과 동일한 세로 배치) -->
+  <form method="post" class="panel group-friend-add" style="margin-bottom: 20px;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_friend">
+    <h2><i class="fa-solid fa-user-plus" style="color: var(--neon-mint); margin-right: 6px;"></i>친구 추가</h2>
+    <p>초대할 친구의 활동 닉네임 또는 아이디를 입력하세요.</p>
+    {{ friend_form.friend_code }}
+    <button class="button secondary" type="submit">친구 목록에 추가</button>
+  </form>
+
+  <!-- 파티 만들기 카드 (2번째 사진과 동일한 세로 배치) -->
+  <form method="post" class="panel group-room-form" style="margin-top: 0;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="create_room">
+    <h2><i class="fa-solid fa-users" style="color: #38BDF8; margin-right: 6px;"></i>파티 만들기</h2>
+    <label for="roomName">파티 이름</label>
+    <input class="input" id="roomName" name="room_name" maxlength="100" required placeholder="예: 퇴근 후 러닝 파티">
+    <div class="form-grid">
+      <div class="field">
+        <label for="challengeStart">내기 시작일</label>
+        <input class="input" id="challengeStart" name="challenge_start" type="date" required>
+      </div>
+      <div class="field">
+        <label for="challengeEnd">내기 종료일</label>
+        <input class="input" id="challengeEnd" name="challenge_end" type="date" required>
+      </div>
+    </div>
+    <div class="form-grid" style="margin-top: 10px;">
+      <div class="field">
+        <label for="challengeEndTime"><i class="fa-solid fa-stopwatch" style="color: var(--neon-mint); margin-right: 4px;"></i>내기 마감 시각 (타이머)</label>
+        <input class="input" id="challengeEndTime" name="challenge_end_time" type="time" value="23:59" required>
+      </div>
+      <div class="field">
+        <label for="targetTimerMinutes"><i class="fa-solid fa-hourglass-half" style="color: #38BDF8; margin-right: 4px;"></i>파티 목표 운동 시간 (선택, 분)</label>
+        <input class="input" id="targetTimerMinutes" name="target_timer_minutes" type="number" min="0" max="360" placeholder="예: 60 (분 단위)">
+      </div>
+    </div>
+    <div class="field">
+      <label for="challengeReward">내기 보상</label>
+      <input class="input" id="challengeReward" name="challenge_reward" maxlength="200" placeholder="예: 1등에게 치킨 쏘기 🍗">
+    </div>
+    <small>설정한 기간과 마감 타이머 시각까지 모은 배지 점수를 합산해 파티 1등을 가립니다.</small>
+
+    <div class="field" style="margin-top: 14px;">
+      <label for="directInvitee"><i class="fa-solid fa-magnifying-glass" style="color: var(--neon-mint); margin-right: 4px;"></i>친구 닉네임으로 바로 초대 (선택)</label>
+      <div style="display: flex; gap: 8px;">
+        <input class="input" id="directInvitee" name="direct_invitee" placeholder="초대할 친구의 닉네임 또는 아이디 입력" autocomplete="off" style="flex: 1;">
+        <button type="button" id="btnSearchDirectInvitee" class="button secondary" style="padding: 0 16px; font-weight: 700; white-space: nowrap;">
+          <i class="fa-solid fa-magnifying-glass"></i> 검색
+        </button>
+      </div>
+      <input type="hidden" id="directInviteeId" name="direct_invitee_id" value="">
+      
+      <!-- 🔍 실시간 검색 결과 또는 '등록되지 않은 사용자' 피드백 영역 -->
+      <div id="directSearchFeedback" style="margin-top: 8px; display: none;"></div>
+
+      <small style="color: #94A3B8; display: block; margin-top: 4px;">전체 계정 중 닉네임 또는 아이디를 검색하여 파티 생성과 동시에 초대장을 발송합니다.</small>
+    </div>
+
+    <fieldset class="invite-list" style="margin-top: 14px;">
+      <legend>내 친구 목록에서 선택</legend>
+      {% for friend in friends %}
+        <label>
+          <input type="checkbox" name="invitees" value="{{ friend.id }}">
+          <span>{{ friend.profile.display_name|default:friend.username }}</span>
+          <small>@{{ friend.username }}</small>
+        </label>
+      {% empty %}
+        <p style="color: var(--text-muted); font-size: 13px;">등록된 맞팔로우 친구가 없습니다. 위의 닉네임 직접 검색 입력을 활용해 보세요.</p>
+      {% endfor %}
+    </fieldset>
+    <div style="display: flex; justify-content: flex-end; margin-top: 24px;">
+      <button class="button onboarding-next" type="submit" style="margin: 0 0 0 auto;">다음: 운동 종목 및 파티미션설정 →</button>
+    </div>
+  </form>
+</section>
+
+<style>
+.party-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  background: #111827;
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 800;
+  width: fit-content;
+  transition: all 0.2s ease;
+}
+.party-back-button:hover,
+.party-back-button:focus-visible {
+  border-color: var(--neon-mint);
+  background: rgba(0, 245, 155, 0.12);
+  color: var(--neon-mint);
+  transform: translateX(-3px);
+}
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const input = document.getElementById("directInvitee");
+  const hiddenId = document.getElementById("directInviteeId");
+  const btnSearch = document.getElementById("btnSearchDirectInvitee");
+  const feedback = document.getElementById("directSearchFeedback");
+
+  if (!input || !btnSearch || !feedback) return;
+
+  let debounceTimer = null;
+
+  async function performUserSearch() {
+    const q = input.value.trim();
+    if (!q) {
+      feedback.style.display = 'none';
+      feedback.innerHTML = '';
+      hiddenId.value = '';
+      return;
+    }
+
+    feedback.style.display = 'block';
+    feedback.innerHTML = '<div style="color: #94A3B8; font-size: 13px; padding: 6px 0;"><i class="fa-solid fa-spinner fa-spin"></i> 사용자를 검색하는 중...</div>';
+
+    try {
+      const resp = await fetch(`/api/users/search/?q=${encodeURIComponent(q)}`);
+      const data = await resp.json();
+
+      if (!data.results || data.results.length === 0) {
+        hiddenId.value = '';
+        feedback.innerHTML = `
+          <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 10px; padding: 10px 14px; color: #FCA5A5; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-circle-exclamation" style="color: #EF4444; font-size: 15px;"></i>
+            <span>등록되지 않은 사용자입니다.</span>
+          </div>
+        `;
+      } else {
+        let html = '<div style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px;">';
+        data.results.forEach((user, idx) => {
+          const isSelected = (idx === 0);
+          if (isSelected) {
+            hiddenId.value = user.id;
+          }
+          html += `
+            <div class="searched-user-card" onclick="selectSearchedUser(${user.id}, '${escapeHtml(user.username)}', '${escapeHtml(user.display_name)}')" style="display: flex; justify-content: space-between; align-items: center; background: rgba(16, 24, 39, 0.85); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 10px; padding: 10px 14px; cursor: pointer; transition: all 0.2s ease;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(0, 245, 155, 0.15); border: 1px solid var(--neon-mint); display: flex; align-items: center; justify-content: center; color: var(--neon-mint); font-size: 13px;">
+                  <i class="fa-solid fa-user"></i>
+                </div>
+                <div>
+                  <b style="color: #FFFFFF; font-size: 13.5px;">${escapeHtml(user.display_name)}</b>
+                  <small style="color: #94A3B8; display: block; font-size: 11.5px;">@${escapeHtml(user.username)} · ${escapeHtml(user.area)}</small>
+                </div>
+              </div>
+              <span id="badgeUser${user.id}" style="font-size: 11px; font-weight: 800; background: rgba(0, 245, 155, 0.15); color: var(--neon-mint); border: 1px solid rgba(0, 245, 155, 0.35); padding: 3px 8px; border-radius: 6px;">
+                <i class="fa-solid fa-check"></i> 초대 대상 추가됨
+              </span>
+            </div>
+          `;
+        });
+        html += '</div>';
+        feedback.innerHTML = html;
+      }
+    } catch (err) {
+      feedback.innerHTML = '<div style="color: #EF4444; font-size: 13px;">검색 중 오류가 발생했습니다.</div>';
+    }
+  }
+
+  window.selectSearchedUser = function(id, username, displayName) {
+    hiddenId.value = id;
+    input.value = displayName || username;
+  };
+
+  function escapeHtml(str) {
+    return (str || '').replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[m]);
+  }
+
+  btnSearch.addEventListener("click", performUserSearch);
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      performUserSearch();
+    }
+  });
+
+  input.addEventListener("input", () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(performUserSearch, 400);
+  });
+});
+</script>
+{% endblock %}

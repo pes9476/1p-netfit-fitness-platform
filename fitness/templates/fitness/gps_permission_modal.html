@@ -1,0 +1,83 @@
+<!-- ==========================================================================
+     📍 브라우저 표준 네이티브 GPS 위치 서비스 직결 모듈
+     사이트 내부의 가짜 확인 모달 없이, 크롬/사파리 시스템 권한 팝업을 직접 1회만 호출합니다.
+     ========================================================================== -->
+<div id="gpsPermissionModal" style="display: none;"></div>
+
+<script>
+let isHighAccuracy = true;
+let activeGpsSuccessCallback = null;
+let activeGpsErrorCallback = null;
+
+// GPS 권한 허용 여부 확인 (브라우저 세션/스토리지 기반)
+function isNetfitGPSAllowed() {
+  try {
+    return sessionStorage.getItem("netfit_gps_allowed") === "true";
+  } catch(e) {
+    return false;
+  }
+}
+
+// 웹사이트 내 가짜 모달 없이, 브라우저 시스템 위치 권한 팝업으로 직접 직결
+function openGPSPermissionModal(onSuccessCallback, onErrorCallback = null, force = false) {
+  activeGpsSuccessCallback = onSuccessCallback;
+  activeGpsErrorCallback = onErrorCallback;
+  executeGPSFetch(onSuccessCallback, onErrorCallback);
+}
+
+function closeGPSPermissionModal() {
+  // 모달이 없으므로 no-op
+}
+
+// 실제 브라우저 표준 Geolocation API 직접 호출 (크롬/사파리 진짜 팝업 1회만 노출)
+function executeGPSFetch(successCb, errorCb) {
+  if (!navigator.geolocation) {
+    alert("현재 브라우저에서 GPS 위치 서비스를 지원하지 않습니다. 지역 선택 버튼을 활용해 주세요.");
+    if (errorCb) errorCb({ code: 0, message: "Geolocation unsupported" });
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    function(position) {
+      const coords = {
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude
+      };
+      try {
+        sessionStorage.setItem("netfit_gps_allowed", "true");
+        localStorage.setItem("netfit_gps_perm", "ALWAYS");
+      } catch(e){}
+      if (successCb) successCb(coords);
+    },
+    function(error) {
+      console.warn("GPS request denied or timed out:", error);
+      let errMessage = "";
+      if (error.code === 1) {
+        // 사용자가 브라우저 팝업에서 [차단]을 누른 경우
+        errMessage = "브라우저의 위치 권한이 차단되었습니다.\n기본 지역 또는 원클릭 지역 칩(부평, 가산동 등)을 이용해 주세요.";
+      } else if (error.code === 2) {
+        errMessage = "현재 위치 신호를 측정할 수 없습니다. 잠시 후 다시 시도해 주세요.";
+      } else if (error.code === 3) {
+        errMessage = "위치 확인 시간(Timeout)이 초과되었습니다. 다시 시도해 주세요.";
+      }
+      if (errMessage) {
+        alert(errMessage);
+      }
+      if (errorCb) errorCb(error);
+    },
+    {
+      enableHighAccuracy: isHighAccuracy,
+      timeout: 10000,
+      maximumAge: 60000
+    }
+  );
+}
+
+function toggleGpsAccuracy() {
+  isHighAccuracy = !isHighAccuracy;
+}
+
+function handleGpsModalPresetClick() {
+  window.location.href = "{% url 'facilities' %}?preset=부평";
+}
+</script>

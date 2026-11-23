@@ -1,0 +1,94 @@
+{% extends "fitness/base.html" %}
+{% block content %}
+<section class="page-intro">
+  <h1><i class="fa-solid fa-trophy" style="color: var(--trophy-gold); margin-right: 8px;"></i>랭킹</h1>
+  <p>일일 미션 클리어 점수 기준입니다. 동점이면 같은 점수로 표시됩니다.</p>
+</section>
+
+<div class="rank-filter">
+  <a href="{% url 'ranking' %}?scope=region" class="{% if scope == 'region' %}active{% endif %}">
+    <i class="fa-solid fa-location-dot" style="margin-right: 4px;"></i>내 지역
+  </a>
+  <a href="{% url 'ranking' %}?scope=party" class="{% if scope == 'party' %}active{% endif %}">
+    <i class="fa-solid fa-users" style="margin-right: 4px;"></i>파티
+  </a>
+  <a href="{% url 'ranking' %}?scope=friends" class="{% if scope == 'friends' %}active{% endif %}">
+    <i class="fa-solid fa-user-group" style="margin-right: 4px;"></i>친구
+  </a>
+</div>
+
+<article class="panel table-wrap" style="margin-top: 18px;">
+  <table class="rank-table">
+    <thead>
+      <tr>
+        <th style="width: 80px;">순위</th>
+        <th>닉네임</th>
+        <th>지역</th>
+        <th style="text-align: right;">미션 클리어 점수</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in ranked %}
+        <tr class="rank-row {% if forloop.counter > 10 %}rank-row-hidden{% endif %}" style="{% if item.is_me %}background: rgba(0, 245, 155, 0.08);{% endif %}{% if forloop.counter > 10 %}display:none;{% endif %}">
+          <td>
+            {% if item.rank == 1 %}
+              <span style="font-size: 20px;">🥇</span>
+            {% elif item.rank == 2 %}
+              <span style="font-size: 20px;">🥈</span>
+            {% elif item.rank == 3 %}
+              <span style="font-size: 20px;">🥉</span>
+            {% else %}
+              <b style="color: var(--text-dim); margin-left: 6px;">{{ item.rank }}</b>
+            {% endif %}
+          </td>
+          <td>
+            {% if item.is_me %}
+              <b style="color: var(--neon-mint);"><i class="fa-solid fa-user" style="font-size: 11px; margin-right: 4px;"></i>{{ item.name }} (나)</b>
+            {% else %}
+              <span style="color: #FFFFFF;">{{ item.name }}</span>
+              {% if item.is_demo %}
+                <small style="color: var(--text-dim); font-size: 11px; margin-left: 4px;">예시</small>
+              {% endif %}
+            {% endif %}
+          </td>
+          <td style="color: var(--text-muted);">{{ item.area }}</td>
+          <td style="text-align: right;"><b style="color: var(--trophy-gold); font-size: 15px;">{{ item.total_score }}점</b></td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 30px;">
+            표시할 사용자가 없어요. 프로필에서 랭킹 참여를 선택해주세요.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if ranked|length > 10 %}
+  <div style="text-align: center; padding: 14px 0 6px;">
+    <button type="button" id="rankingShowMoreBtn" onclick="toggleRankingRows()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #E2E8F0; font-size: 12px; font-weight: 800; padding: 8px 24px; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+      <i class="fa-solid fa-chevron-down" id="rankingShowMoreIcon" style="margin-right: 6px; font-size: 10px;"></i>더 보기
+    </button>
+  </div>
+  <script>
+  function toggleRankingRows() {
+    const hiddenRows = document.querySelectorAll('.rank-row-hidden');
+    const btn = document.getElementById('rankingShowMoreBtn');
+    const icon = document.getElementById('rankingShowMoreIcon');
+    const isHidden = hiddenRows[0] && hiddenRows[0].style.display === 'none';
+    hiddenRows.forEach(row => { row.style.display = isHidden ? '' : 'none'; });
+    if (isHidden) {
+      btn.innerHTML = '<i class="fa-solid fa-chevron-up" style="margin-right: 6px; font-size: 10px;"></i>접기';
+    } else {
+      btn.innerHTML = '<i class="fa-solid fa-chevron-down" style="margin-right: 6px; font-size: 10px;"></i>더 보기';
+    }
+  }
+  </script>
+  {% endif %}
+</article>
+
+{% if scope == 'friends' and friend_count == 0 %}
+  <p class="friend-code" style="margin-top: 18px;">
+    아직 친구가 없어요. <a href="{% url 'friends' %}">친구 추가 화면</a>에서 친구 닉네임을 입력해보세요.
+  </p>
+{% endif %}
+{% endblock %}

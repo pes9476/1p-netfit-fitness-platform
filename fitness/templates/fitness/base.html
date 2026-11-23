@@ -1,0 +1,630 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko" class="notranslate" translate="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google" content="notranslate">
+  <title>넷핏 NETFIT · 핏배틀</title>
+  
+  <!-- Pretendard Variable & FontAwesome 6.5.1 -->
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  
+  <!-- NetFit Theme & Mascots CSS -->
+  <link rel="stylesheet" href="{% static 'fitness/css/netfit-theme.css' %}">
+  <link rel="stylesheet" href="{% static 'fitness/css/netfit-mascots.css' %}">
+</head>
+<body class="{% if request.resolver_match.url_name == 'onboarding_intro' or request.resolver_match.url_name == 'onboarding_profile' or request.resolver_match.url_name == 'onboarding_course' or request.resolver_match.url_name == 'onboarding_mode' or request.resolver_match.url_name == 'onboarding_solo' or request.resolver_match.url_name == 'onboarding_group' or request.resolver_match.url_name == 'onboarding_group_quest' %}onboarding-page{% endif %}">
+  {% if user.is_authenticated %}
+  <header class="top">
+    <div class="wrap">
+      <div class="topline">
+        <a href="{% url 'dashboard' %}" class="logo">
+          <i class="fa-solid fa-bolt" style="color: var(--neon-mint);"></i>
+          <span><b>NetFit</b></span>
+          <small>NETWORK · FITNESS</small>
+        </a>
+
+        <div class="user header-actions">
+          <!-- 일일미션 드롭다운 -->
+          <details class="header-friends header-quests">
+            <summary title="일일미션 확인">
+              <i class="fa-solid fa-bell" style="color: var(--trophy-gold);"></i>
+              <span>일일미션</span>
+              {% if header_quest_pending_count %}<i>{{ header_quest_pending_count }}</i>{% endif %}
+            </summary>
+            <div class="header-friends-links quest-menu">
+              <strong>내 일일미션</strong>
+              <div class="quest-menu-scroll">
+              {% for quest in header_quests %}
+                <div class="quest-menu-item {% if quest.completed %}done{% endif %}">
+                  <span>{% if quest.completed %}✓{% else %}○{% endif %}</span>
+                  <div>
+                    <b>{{ quest.title }}</b>
+                    <small>{{ quest.detail }}</small>
+                  </div>
+                  <em>{% if quest.completed %}완료{% else %}진행 중{% endif %}</em>
+                </div>
+              {% empty %}
+                <p>설정된 일일미션이 없어요.</p>
+              {% endfor %}
+              </div>
+              <a href="{% url 'dashboard' %}#daily-quests">대시보드에서 확인·완료하기</a>
+            </div>
+          </details>
+
+          <!-- 튼튼머니 혜택 안내 버튼 -->
+          <button type="button" onclick="openTeunTeunPopup(true)" class="header-icon" title="튼튼머니 혜택 안내" style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); color: var(--trophy-gold); cursor: pointer; border-radius: 8px; padding: 4px 9px; display: inline-flex; align-items: center; gap: 5px;">
+            <i class="fa-solid fa-coins" style="color: var(--trophy-gold);"></i>
+            <span style="color: var(--trophy-gold); font-weight: 800; font-size: 11px;">튼튼머니</span>
+          </button>
+
+          <!-- 새 파티 만들기 -->
+          <a class="header-icon" href="{% url 'onboarding_group' %}" title="새 파티 만들기">
+            <i class="fa-solid fa-plus" style="color: var(--neon-mint);"></i>
+            <span>새 파티</span>
+          </a>
+
+          <!-- 그룹원 드롭다운 -->
+          <details class="header-friends header-parties">
+            <summary>
+              <i class="fa-solid fa-users" style="color: #38BDF8;"></i>
+              <span>그룹원</span>
+              {% if pending_party_invitation_count %}
+                <span style="background: #38BDF8; color: #090D16; font-size: 10px; font-weight: 900; border-radius: 8px; padding: 1px 5px; margin-left: 2px; line-height: 1.2;">{{ pending_party_invitation_count }}</span>
+              {% endif %}
+            </summary>
+            <div class="header-friends-links">
+              {% if pending_party_invitation_count %}
+                <a href="{% url 'dashboard' %}" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; color: #38BDF8; font-weight: 800; font-size: 11px;">
+                  <i class="fa-solid fa-bell"></i> 파티 초대 {{ pending_party_invitation_count }}건 도착!
+                </a>
+              {% endif %}
+              {% for party in header_user_parties %}
+                <div class="party-accordion-item">
+                  <button type="button"
+                    class="party-accordion-btn"
+                    onclick="togglePartyMembers(this)"
+                    aria-expanded="false">
+                    <span><i class="fa-solid fa-users" style="font-size: 11px; color: #38BDF8; margin-right: 5px;"></i>{{ party.name }}</span>
+                    <i class="fa-solid fa-chevron-right party-accordion-icon"></i>
+                  </button>
+                  <div class="party-members-scroll party-accordion-body" style="display:none;">
+                    {% for member in party.members.all %}
+                      <small style="display: block; color: var(--text-muted); padding: 3px 0 3px 10px;">• {{ member.profile.display_name|default:member.username }}</small>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% empty %}
+                <small style="display: block; color: var(--text-muted); padding: 4px 6px;">참여 중인 파티가 없어요.</small>
+              {% endfor %}
+              <a href="{% url 'onboarding_group' %}" style="margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.08);">새 파티 만들기</a>
+            </div>
+          </details>
+
+          <!-- 친구 메뉴 드롭다운 -->
+          <details class="header-friends">
+            <summary>
+              <i class="fa-solid fa-user-group" style="color: var(--indigo-primary);"></i>
+              <span>친구</span>
+              {% if header_friend_alert_count %}
+                <span style="background: var(--neon-mint); color: #090D16; font-size: 10px; font-weight: 900; border-radius: 8px; padding: 1px 5px; margin-left: 2px; line-height: 1.2; box-shadow: 0 0 8px rgba(0,245,155,0.6);">{{ header_friend_alert_count }}</span>
+              {% endif %}
+              <i class="fa-solid fa-caret-down" style="font-size: 10px; margin-left: 2px;"></i>
+            </summary>
+            <div class="header-friends-links">
+              {% if pending_friend_count %}
+                <a href="{% url 'friends' %}#received-requests" style="background: rgba(0, 245, 155, 0.12); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; color: var(--neon-mint); font-weight: 800; font-size: 11px; display: flex; align-items: center; justify-content: space-between;">
+                  <span><i class="fa-solid fa-bell"></i> 받은 요청</span>
+                  <b style="background: var(--neon-mint); color: #090D16; padding: 1px 6px; border-radius: 6px; font-size: 10px;">{{ pending_friend_count }}</b>
+                </a>
+              {% endif %}
+              {% if accepted_friend_count %}
+                <a href="{% url 'dashboard' %}" style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 6px; padding: 6px 10px; margin-bottom: 6px; color: #38BDF8; font-weight: 800; font-size: 11px; display: flex; align-items: center; justify-content: space-between;">
+                  <span><i class="fa-solid fa-circle-check"></i> 수락 알림</span>
+                  <b style="background: #38BDF8; color: #090D16; padding: 1px 6px; border-radius: 6px; font-size: 10px;">{{ accepted_friend_count }}</b>
+                </a>
+              {% endif %}
+              <a href="{% url 'friends' %}#friend-list"><i class="fa-solid fa-list" style="margin-right: 6px;"></i>친구 목록 보기</a>
+              <a href="{% url 'friends' %}#friend-add"><i class="fa-solid fa-user-plus" style="margin-right: 6px;"></i>친구 추가</a>
+            </div>
+          </details>
+
+          <!-- 사용자명 및 지역 정보 -->
+          <span class="header-user-name">
+            <i class="fa-solid fa-user-astronaut" style="color: var(--neon-mint); margin-right: 4px;"></i>
+            {% if user.profile.display_name %}
+              <b>{{ user.profile.display_name }}</b>
+              <span style="color: var(--text-dim); margin: 0 4px;">|</span>
+            {% endif %}
+            <span>{{ user.profile.area }}</span>
+          </span>
+
+          <span style="color: var(--text-dim); margin: 0 2px;">|</span>
+
+          <!-- 로그아웃 버튼 -->
+          <form id="globalLogoutForm" method="post" action="{% url 'logout' %}" style="display:inline; margin: 0; padding: 0;">
+            {% csrf_token %}
+            <button type="button" id="globalLogoutBtn" onclick="openLogoutConfirmModal()" class="logout-link" title="로그아웃">
+              <i class="fa-solid fa-arrow-right-from-bracket" style="font-size: 11px;"></i> 로그아웃
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <nav class="tabs">
+        <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" {% if request.resolver_match.url_name == 'dashboard' %}aria-current="page"{% endif %}>
+          <i class="fa-solid fa-house"></i> 대시보드
+        </a>
+        <a href="{% url 'profile' %}" class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}" {% if request.resolver_match.url_name == 'profile' %}aria-current="page"{% endif %}>
+          <i class="fa-solid fa-address-card"></i> 마이페이지
+        </a>
+        <a href="{% url 'activity' %}" class="{% if request.resolver_match.url_name == 'activity' %}active{% endif %}" {% if request.resolver_match.url_name == 'activity' %}aria-current="page"{% endif %}>
+          <i class="fa-solid fa-person-running"></i> 운동 기록
+        </a>
+        <a href="{% url 'ranking' %}" class="{% if request.resolver_match.url_name == 'ranking' %}active{% endif %}" {% if request.resolver_match.url_name == 'ranking' %}aria-current="page"{% endif %}>
+          <i class="fa-solid fa-trophy"></i> 랭킹
+        </a>
+        <a href="{% url 'friends' %}" class="{% if request.resolver_match.url_name == 'friends' %}active{% endif %}" {% if request.resolver_match.url_name == 'friends' %}aria-current="page"{% endif %}>
+          <i class="fa-solid fa-user-group"></i> 친구
+        </a>
+        <a href="{% url 'facilities' %}" class="{% if request.resolver_match.url_name == 'facilities' %}active{% endif %}" {% if request.resolver_match.url_name == 'facilities' %}aria-current="page"{% endif %}>
+          <i class="fa-solid fa-location-dot"></i> 주변 시설
+        </a>
+        <a href="{% url 'outfit_shop' %}" class="{% if request.resolver_match.url_name == 'outfit_shop' %}active{% endif %}" {% if request.resolver_match.url_name == 'outfit_shop' %}aria-current="page"{% endif %}>
+          <i class="fa-solid fa-shirt"></i> 메달 샵·꾸미기
+        </a>
+      </nav>
+
+    </div>
+  </header>
+  {% endif %}
+
+  <main class="wrap">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="notice flash-notice {% if message.tags == 'error' %}error{% endif %}">
+          <i class="fa-solid {% if message.tags == 'error' %}fa-triangle-exclamation{% else %}fa-circle-check{% endif %}"></i>
+          <span style="flex: 1;">{{ message }}</span>
+          <button type="button" class="notice-close-btn" onclick="dismissNotice(this.closest('.notice'))" title="닫기">×</button>
+        </div>
+      {% endfor %}
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="{% static 'fitness/js/avatar.js' %}"></script>
+  {% if user.is_authenticated %}
+    {% include "fitness/teunteun_popup.html" %}
+    {% include "fitness/gps_permission_modal.html" %}
+    {% include "fitness/logout_modal.html" %}
+    {% include "fitness/public_data_modal.html" %}
+    <!-- 🔔 실시간 플로팅 토스트 알림 컨테이너 -->
+    <div id="globalToastContainer" style="position: fixed; top: 24px; right: 24px; z-index: 99999; display: flex; flex-direction: column; gap: 10px; max-width: 380px; width: calc(100vw - 48px); pointer-events: none;"></div>
+  {% endif %}
+  <script src="{% static 'fitness/js/mascot-picker.js' %}" defer></script>
+
+  <script>
+  // 그룹원 드롭다운 파티 아코디언 토글
+  function togglePartyMembers(btn) {
+    const body = btn.nextElementSibling;
+    const isOpen = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+    body.style.display = isOpen ? 'none' : 'block';
+  }
+
+  (() => {
+    // 드롭다운 외부 클릭 및 ESC 닫기 핸들러
+    const menus = [...document.querySelectorAll('.header-friends')];
+    if (menus.length) {
+      document.addEventListener('click', event => menus.forEach(menu => { if (!menu.contains(event.target)) menu.open = false; }));
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') menus.forEach(menu => { if (menu.open) { menu.open = false; menu.querySelector('summary').focus(); } });
+      });
+      menus.forEach(menu => menu.querySelectorAll('a').forEach(link => link.addEventListener('click', () => { menu.open = false; })));
+    }
+
+    // ⏳ 알림 배너 5초 후 자동 페이드아웃 및 닫기 핸들러
+    window.dismissNotice = function(el) {
+      if (!el || el.classList.contains('fade-out')) return;
+      el.classList.add('fade-out');
+      setTimeout(() => { if (el && el.parentNode) el.parentNode.removeChild(el); }, 500);
+    };
+
+    const notices = document.querySelectorAll('.flash-notice');
+    notices.forEach(notice => {
+      let timer = setTimeout(() => {
+        window.dismissNotice(notice);
+      }, 5000);
+
+      notice.addEventListener('mouseenter', () => clearTimeout(timer));
+      notice.addEventListener('mouseleave', () => {
+        timer = setTimeout(() => window.dismissNotice(notice), 2000);
+      });
+    });
+
+    {% if user.is_authenticated %}
+    // ==========================================
+    // 🔔 실시간 스마트 알림 폴링 (Smart Polling)
+    // ==========================================
+    (function initSmartNotificationPolling() {
+      const POLLING_INTERVAL = 15000; // 15초 최적화 (동시 요청 병목 해소)
+      const knownNotificationIds = new Set();
+      let isInitialScan = true;
+
+      // 화면에 이미 렌더링된 알림 ID 등록
+      document.querySelectorAll('.notification-item').forEach(el => {
+        if (el.dataset.id) knownNotificationIds.add(el.dataset.id);
+      });
+
+      window.handleNotificationAction = function(url, el) {
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken') || '';
+        const isPartyAccept = url.includes('/party/invitation/') && url.includes('/accept/');
+        fetch(url, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
+          }
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (el) {
+            el.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-10px) scale(0.96)';
+            setTimeout(() => {
+              el.remove();
+              const container = document.getElementById('notificationAlertsContainer');
+              if (container && container.querySelectorAll('.notification-item').length === 0) {
+                container.style.display = 'none';
+              }
+            }, 300);
+          }
+          if (isPartyAccept) {
+            showToast('🎉', '파티 참가 완료!', '파티에 성공적으로 참가했습니다. 대시보드를 갱신합니다.', '#38BDF8');
+            if (window.location.pathname === '/' || window.location.pathname === '') {
+              setTimeout(() => {
+                window.location.reload();
+              }, 800);
+            }
+          }
+        })
+        .catch(err => {
+          console.warn('Action error, falling back:', err);
+          if (el && el.tagName === 'FORM') el.submit();
+          else window.location.reload();
+        });
+      };
+
+      function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+          const cookies = document.cookie.split(';');
+          for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+              break;
+            }
+          }
+        }
+        return cookieValue;
+      }
+
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function showToast(icon, title, message, badgeColor) {
+        const container = document.getElementById('globalToastContainer');
+        if (!container) return;
+        const toast = document.createElement('div');
+        toast.className = 'global-toast-item';
+        toast.style.cssText = `
+          background: rgba(15, 23, 42, 0.96);
+          border: 1px solid ${badgeColor || 'var(--neon-mint)'};
+          border-radius: 14px;
+          padding: 13px 16px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 16px rgba(0, 245, 155, 0.15);
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          pointer-events: auto;
+          cursor: pointer;
+          animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          transition: all 0.3s ease;
+        `;
+        toast.innerHTML = `
+          <span style="font-size: 24px; flex-shrink: 0;">${icon}</span>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 11.5px; font-weight: 800; color: ${badgeColor || 'var(--neon-mint)'};">${escapeHtml(title)}</div>
+            <div style="font-size: 13px; font-weight: 700; color: #FFFFFF; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(message)}</div>
+          </div>
+          <span style="color: #94A3B8; font-size: 14px; margin-left: 6px; padding: 2px;">✕</span>
+        `;
+        toast.onclick = function() {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateX(20px)';
+          setTimeout(() => toast.remove(), 300);
+        };
+        container.appendChild(toast);
+        setTimeout(() => {
+          if (toast && toast.parentNode) {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(20px)';
+            setTimeout(() => toast.remove(), 300);
+          }
+        }, 6000);
+      }
+
+      function renderPokeCard(poke) {
+        return `
+          <div class="notification-alert-box notification-item" data-id="poke_${poke.id}" style="background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(245, 158, 11, 0.5); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(245, 158, 11, 0.15); animation: popIn 0.25s;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px; background: rgba(245, 158, 11, 0.2); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(245, 158, 11, 0.45);">👉</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 11px; font-weight: 900; background: rgba(245, 158, 11, 0.25); color: #FBBF24; padding: 2px 8px; border-radius: 6px;">콕 찌르기 도착!</span>
+                  ${poke.party_name ? `<span style="font-size: 11px; font-weight: 700; color: #94A3B8;">[${escapeHtml(poke.party_name)}]</span>` : ''}
+                  <span style="color: #94A3B8; font-size: 11px;">${poke.created_at}</span>
+                </div>
+                <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+                  <b style="color: #FBBF24;">${escapeHtml(poke.sender_name)}</b>님이 콕 찔렀어요: <span style="color: #FDE68A; font-weight: 800;">"${escapeHtml(poke.message)}"</span>
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <a href="/activity/" class="button btn-mint" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-play"></i> 지금 운동하기
+              </a>
+              <button type="button" onclick="handleNotificationAction('${poke.dismiss_url}', this.closest('.notification-item'))" class="button secondary" style="padding: 7px 14px; font-size: 12.5px; font-weight: 800; border-radius: 8px; color: #94A3B8; border-color: rgba(148, 163, 184, 0.3); cursor: pointer;">
+                <i class="fa-solid fa-check"></i> 확인
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderAcceptedPartyCard(ainv) {
+        return `
+          <div class="notification-alert-box notification-item" data-id="party_acc_${ainv.id}" style="background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(56, 189, 248, 0.12); animation: popIn 0.25s;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px; background: rgba(56, 189, 248, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(56, 189, 248, 0.3);">🎉</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 11px; font-weight: 900; background: rgba(56, 189, 248, 0.25); color: #38BDF8; padding: 2px 8px; border-radius: 6px;">파티 초대 수락</span>
+                  <span style="color: #94A3B8; font-size: 11px;">새로운 파티원이 합류했습니다</span>
+                </div>
+                <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+                  <b style="color: #38BDF8;">${escapeHtml(ainv.invitee_name)}</b>님이 <b style="color: #FFFFFF;">'${escapeHtml(ainv.party_name)}'</b> 파티 초대를 수락했습니다! 함께 협동 미션을 시작해보세요.
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button type="button" onclick="handleNotificationAction('${ainv.dismiss_url}', this.closest('.notification-item'))" class="button btn-mint" style="background: #38BDF8; border-color: #38BDF8; color: #090D16; padding: 7px 18px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
+                <i class="fa-solid fa-check"></i> 확인
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderAcceptedFriendCard(acc) {
+        return `
+          <div class="notification-alert-box notification-item" data-id="friend_acc_${acc.id}" style="background: linear-gradient(90deg, rgba(16, 36, 34, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.45); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.12); animation: popIn 0.25s;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px; background: rgba(0, 245, 155, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 245, 155, 0.3);">🎉</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 11px; font-weight: 900; background: rgba(0, 245, 155, 0.25); color: var(--neon-mint); padding: 2px 8px; border-radius: 6px;">친구 요청 수락</span>
+                  <span style="color: #94A3B8; font-size: 11px;">상대방이 요청을 수락했습니다</span>
+                </div>
+                <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+                  <b style="color: var(--neon-mint);">${escapeHtml(acc.friend_name)}</b> (@${escapeHtml(acc.friend_username)})님이 친구 요청을 수락했습니다! 이제 함께 운동할 수 있어요.
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button type="button" onclick="handleNotificationAction('${acc.dismiss_url}', this.closest('.notification-item'))" class="button btn-mint" style="padding: 7px 18px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
+                <i class="fa-solid fa-check"></i> 확인
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderPendingFriendCard(freq) {
+        return `
+          <div class="notification-alert-box notification-item" data-id="friend_req_${freq.id}" style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(0, 245, 155, 0.35); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(0, 245, 155, 0.08); animation: popIn 0.25s;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px; background: rgba(0, 245, 155, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 245, 155, 0.3);">👋</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 11px; font-weight: 900; background: rgba(0, 245, 155, 0.2); color: var(--neon-mint); padding: 2px 8px; border-radius: 6px;">친구 요청</span>
+                  <span style="color: #94A3B8; font-size: 11px;">새로운 친구 요청이 도착했습니다</span>
+                </div>
+                <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+                  <b style="color: var(--neon-mint);">${escapeHtml(freq.from_name)}</b> (@${escapeHtml(freq.from_username)})님이 친구 추가를 요청했어요!
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button type="button" onclick="handleNotificationAction('${freq.accept_url}', this.closest('.notification-item'))" class="button btn-mint" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
+                <i class="fa-solid fa-check"></i> 수락
+              </button>
+              <button type="button" onclick="handleNotificationAction('${freq.reject_url}', this.closest('.notification-item'))" class="button secondary" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; color: #EF4444; border-color: rgba(239, 68, 68, 0.3); cursor: pointer;">
+                <i class="fa-solid fa-xmark"></i> 거절
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderPendingPartyCard(inv) {
+        return `
+          <div class="notification-alert-box notification-item" data-id="party_inv_${inv.id}" style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 14px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 18px rgba(56, 189, 248, 0.1); animation: popIn 0.25s;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 24px; background: rgba(56, 189, 248, 0.15); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(56, 189, 248, 0.4);">⚔️</span>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 11px; font-weight: 900; background: rgba(56, 189, 248, 0.2); color: #38BDF8; padding: 2px 8px; border-radius: 6px;">파티 초대</span>
+                  <span style="color: #94A3B8; font-size: 11px;">파티 참여 요청</span>
+                </div>
+                <p style="margin: 4px 0 0; font-size: 14px; font-weight: 700; color: #FFFFFF;">
+                  <b style="color: #38BDF8;">${escapeHtml(inv.inviter_name)}</b>님이 <b style="color: #FFFFFF;">'${escapeHtml(inv.party_name)}'</b> 파티에 초대했습니다! 함께 참여하시겠습니까?
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button type="button" onclick="handleNotificationAction('${inv.accept_url}', this.closest('.notification-item'))" class="button btn-mint" style="background: #38BDF8; border-color: #38BDF8; color: #0B1120; padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; cursor: pointer;">
+                <i class="fa-solid fa-check"></i> 수락
+              </button>
+              <button type="button" onclick="handleNotificationAction('${inv.reject_url}', this.closest('.notification-item'))" class="button secondary" style="padding: 7px 16px; font-size: 12.5px; font-weight: 800; border-radius: 8px; color: #EF4444; border-color: rgba(239, 68, 68, 0.3); cursor: pointer;">
+                <i class="fa-solid fa-xmark"></i> 거절
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      function pollNotifications() {
+        if (document.visibilityState !== 'visible') return;
+
+        fetch('/api/notifications/', {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => {
+          if (!res.ok) return null;
+          return res.json();
+        })
+        .then(data => {
+          if (!data) return;
+
+          const container = document.getElementById('notificationAlertsContainer');
+          const currentFetchedIds = new Set();
+
+          // 1. Pokes
+          data.unread_pokes.forEach(poke => {
+            const id = 'poke_' + poke.id;
+            currentFetchedIds.add(id);
+            if (!knownNotificationIds.has(id)) {
+              knownNotificationIds.add(id);
+              if (!isInitialScan) {
+                showToast('👉', '콕 찌르기 도착!', `${poke.sender_name}님: "${poke.message}"`, '#F59E0B');
+              }
+              if (container) {
+                container.insertAdjacentHTML('afterbegin', renderPokeCard(poke));
+                container.style.display = 'flex';
+              }
+            }
+          });
+
+          // 2. Accepted party
+          data.accepted_party_invitations.forEach(ainv => {
+            const id = 'party_acc_' + ainv.id;
+            currentFetchedIds.add(id);
+            if (!knownNotificationIds.has(id)) {
+              knownNotificationIds.add(id);
+              if (!isInitialScan) {
+                showToast('🎉', '파티 초대 수락!', `${ainv.invitee_name}님이 '${ainv.party_name}' 초대를 수락했습니다.`, '#38BDF8');
+                if (window.location.pathname === '/' || window.location.pathname === '') {
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 1200);
+                }
+              }
+              if (container) {
+                container.insertAdjacentHTML('afterbegin', renderAcceptedPartyCard(ainv));
+                container.style.display = 'flex';
+              }
+            }
+          });
+
+          // 3. Accepted friend
+          data.accepted_friend_requests.forEach(acc => {
+            const id = 'friend_acc_' + acc.id;
+            currentFetchedIds.add(id);
+            if (!knownNotificationIds.has(id)) {
+              knownNotificationIds.add(id);
+              if (!isInitialScan) {
+                showToast('🎉', '친구 요청 수락!', `${acc.friend_name}님이 친구 요청을 수락했습니다.`, 'var(--neon-mint)');
+              }
+              if (container) {
+                container.insertAdjacentHTML('afterbegin', renderAcceptedFriendCard(acc));
+                container.style.display = 'flex';
+              }
+            }
+          });
+
+          // 4. Pending friend
+          data.pending_friend_requests.forEach(freq => {
+            const id = 'friend_req_' + freq.id;
+            currentFetchedIds.add(id);
+            if (!knownNotificationIds.has(id)) {
+              knownNotificationIds.add(id);
+              if (!isInitialScan) {
+                showToast('👋', '새 친구 요청!', `${freq.from_name}님의 친구 추가 요청이 도착했습니다.`, 'var(--neon-mint)');
+              }
+              if (container) {
+                container.insertAdjacentHTML('afterbegin', renderPendingFriendCard(freq));
+                container.style.display = 'flex';
+              }
+            }
+          });
+
+          // 5. Pending party
+          data.pending_party_invitations.forEach(inv => {
+            const id = 'party_inv_' + inv.id;
+            currentFetchedIds.add(id);
+            if (!knownNotificationIds.has(id)) {
+              knownNotificationIds.add(id);
+              if (!isInitialScan) {
+                showToast('⚔️', '파티 초대 도착!', `${inv.inviter_name}님이 '${inv.party_name}' 파티에 초대했습니다.`, '#38BDF8');
+              }
+              if (container) {
+                container.insertAdjacentHTML('afterbegin', renderPendingPartyCard(inv));
+                container.style.display = 'flex';
+              }
+            }
+          });
+
+          // 다른 탭에서 이미 확인하여 DB에서 사라진 알림 정리
+          if (container) {
+            container.querySelectorAll('.notification-item').forEach(el => {
+              const id = el.dataset.id;
+              if (id && !currentFetchedIds.has(id)) {
+                el.remove();
+              }
+            });
+            if (container.querySelectorAll('.notification-item').length === 0) {
+              container.style.display = 'none';
+            }
+          }
+
+          isInitialScan = false;
+        })
+        .catch(err => console.debug('Polling check:', err));
+      }
+
+      setInterval(pollNotifications, POLLING_INTERVAL);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          pollNotifications();
+        }
+      });
+    })();
+    {% endif %}
+  })();
+  </script>
+  {% include "fitness/fitbot_widget.html" %}
+</body>
+</html>
+
+

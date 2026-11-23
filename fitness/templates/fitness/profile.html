@@ -1,0 +1,310 @@
+{% extends "fitness/base.html" %}
+{% block content %}
+<section class="page-intro">
+  <h1><i class="fa-solid fa-id-card" style="color: var(--neon-mint); margin-right: 8px;"></i>마이페이지</h1>
+  <p>내 정보와 비만도, 캐릭터 설정을 관리하세요.</p>
+</section>
+
+<style>
+.profile-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 24px;
+  align-items: start;
+}
+.preview-panel {
+  position: sticky;
+  top: 24px;
+  z-index: 10;
+}
+.preview-panel .mini-card {
+  position: relative;
+  height: 240px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 245, 155, 0.25);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 0 15px rgba(0, 245, 155, 0.05);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 16px 0;
+}
+.preview-panel .mini-card::after {
+  content: "";
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 130px;
+  height: 20px;
+  background: radial-gradient(ellipse at center, rgba(0, 245, 155, 0.45) 0%, rgba(56, 189, 248, 0.15) 50%, transparent 75%);
+  border-radius: 50%;
+  filter: blur(4px);
+  z-index: 2;
+  pointer-events: none;
+}
+.preview-panel .mini-card .avatar-roster {
+  position: absolute;
+  inset: 0 0 20px;
+  --mascot-size: 155px;
+  display: grid;
+  place-items: center;
+  z-index: 3;
+}
+.preview-panel .mini-card .avatar-roster::before {
+  width: 155px;
+  max-width: 90%;
+}
+.preview-panel .mini-card .scene-caption {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: auto;
+  left: auto;
+  z-index: 5;
+  background: rgba(11, 18, 32, 0.8);
+  border: 1px solid rgba(0, 245, 155, 0.35);
+  color: var(--neon-mint);
+  font-size: 11px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 850px) {
+  .profile-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
+  }
+  .preview-panel {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    order: -1 !important;
+    margin-bottom: 4px !important;
+  }
+  .preview-panel .mini-card {
+    height: 210px !important;
+    max-width: 100% !important;
+    margin: 12px 0 !important;
+  }
+  .preview-panel .mini-card .avatar-roster {
+    --mascot-size: 140px !important;
+  }
+  .preview-panel .mini-card .avatar-roster::before {
+    width: 140px !important;
+    max-width: 85% !important;
+  }
+  .preview-panel .mini-card::after {
+    width: 120px !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .profile-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .profile-grid.bmi-inputs {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .profile-grid.bmi-inputs .field:first-child {
+    grid-column: 1 / -1;
+  }
+  .form-grid .field {
+    margin: 0 !important;
+  }
+  .bmi-scale {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+  .bmi-scale span {
+    font-size: 10px !important;
+    padding: 6px 2px !important;
+    line-height: 1.25 !important;
+    word-break: keep-all !important;
+  }
+  .bmi-result {
+    font-size: 13px !important;
+    padding: 12px 14px !important;
+    text-align: center;
+    word-break: keep-all !important;
+  }
+}
+</style>
+
+<section class="profile-layout">
+  <article class="panel">
+    <h2><i class="fa-solid fa-user-gear" style="color: var(--neon-mint); margin-right: 8px;"></i>내 프로필</h2>
+    <form method="post" style="margin-top: 16px;">
+      {% csrf_token %}
+      <div class="form-grid profile-grid">
+        <div class="field">{{ form.nickname.label_tag }}{{ form.nickname }}{{ form.nickname.errors }}</div>
+        <div class="field">{{ form.area.label_tag }}{{ form.area }}</div>
+        <div class="field">{{ form.age.label_tag }}{{ form.age }}</div>
+        <div class="field">{{ form.gender.label_tag }}{{ form.gender }}</div>
+        <div class="field full check">
+          {{ form.rank_participation }}
+          <label for="{{ form.rank_participation.id_for_label }}">랭킹 참여 — 닉네임·지역·미션 클리어 점수만 표시합니다.</label>
+        </div>
+      </div>
+      
+      <hr>
+      <h2><i class="fa-solid fa-calculator" style="color: #38BDF8; margin-right: 8px;"></i>비만도 참고 계산</h2>
+      <p style="color: var(--text-muted); font-size: 13px; margin: 6px 0 16px;">키와 몸무게로 계산한 BMI는 참고용 수치이며 의료 진단이 아닙니다.</p>
+      
+      <div class="form-grid profile-grid bmi-inputs">
+        <div class="field">{{ form.measured_on.label_tag }}{{ form.measured_on }}</div>
+        <div class="field">{{ form.height_cm.label_tag }}{{ form.height_cm }}</div>
+        <div class="field">{{ form.weight_kg.label_tag }}{{ form.weight_kg }}</div>
+      </div>
+      
+      <div class="bmi-result" id="bmiResult">
+        저장된 결과: {% if profile.bmi %}BMI {{ profile.bmi }} · {{ profile.bmi_status }}{% else %}키와 몸무게를 입력해주세요.{% endif %}
+      </div>
+      
+      <div class="bmi-scale">
+        <span>저체중<br>18.5 미만</span>
+        <span>정상<br>18.5~22.9</span>
+        <span>과체중<br>23~24.9</span>
+        <span>비만 참고<br>25 이상</span>
+      </div>
+
+      <hr>
+      <h2><i class="fa-solid fa-paw" style="color: var(--neon-mint); margin-right: 8px;"></i>대표 마스코트 파이터 선택</h2>
+      <p style="color: var(--text-muted); font-size: 13px; margin: 6px 0 14px;">원하는 마스코트를 선택하면 미리보기 카드에서 뛰는 모습을 실시간으로 확인할 수 있습니다.</p>
+      
+      <div class="field full">
+        {{ form.avatar_preference.label_tag }}
+        {{ form.avatar_preference }}
+      </div>
+      
+      <p class="bmi-hint" style="margin-top: 10px;">선택한 캐릭터는 대시보드, 샵, 배틀 등 서비스 전반에 내 파이터로 적용됩니다.</p>
+      
+      <button class="button btn-mint" type="submit" style="margin-top: 14px; width: 100%;">
+        <i class="fa-solid fa-floppy-disk"></i>
+        <span>프로필과 비만도 저장하기</span>
+      </button>
+    </form>
+  </article>
+
+  <aside class="panel preview-panel">
+    <h2><i class="fa-solid fa-eye" style="color: var(--trophy-gold); margin-right: 8px;"></i>내 캐릭터 미리보기</h2>
+    <div class="mini-card background-sprite scene-walk">
+      <div id="profileAvatar" class="avatar-roster avatar-{{ profile.sprite_gender }} age-{{ profile.age_group }} style-{{ profile.body_style|lower }} outfit-{{ profile.equipped_outfit|lower }}"></div>
+      <span class="scene-caption">저장 전 미리보기</span>
+    </div>
+    <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 14px 16px; margin-top: 12px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+        <b id="previewLabel" style="font-size: 15px; color: #FFFFFF; font-weight: 800;">{{ user.profile.display_name|default:"내 캐릭터" }}</b>
+        <span id="previewMascotBadge" style="font-size: 11px; color: var(--neon-mint); background: rgba(0, 245, 155, 0.1); padding: 2px 6px; border-radius: 4px; font-weight: 600;">활동 파이터</span>
+      </div>
+      <span style="color: var(--text-muted); font-size: 12px; display: block; line-height: 1.5;">선택한 캐릭터를 미리 확인하세요. 저장하면 대시보드에 적용됩니다.</span>
+    </div>
+  </aside>
+</section>
+
+{% include "fitness/workout_analytics.html" %}
+
+<section class="section-head">
+  <div>
+    <h2><i class="fa-solid fa-list" style="color: #38BDF8; margin-right: 8px;"></i>키·몸무게 기록</h2>
+    <p>최근 저장한 비만도 계산 기록입니다.</p>
+  </div>
+</section>
+
+<article class="panel table-wrap">
+  <table class="measure-table">
+    <thead>
+      <tr>
+        <th>측정일</th>
+        <th>키</th>
+        <th>몸무게</th>
+        <th>BMI</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for measurement in measurements %}
+        <tr class="measure-row {% if forloop.counter > 5 %}measure-row-hidden{% endif %}" {% if forloop.counter > 5 %}style="display:none;"{% endif %}>
+          <td>{{ measurement.measured_on|date:"Y.m.d" }}</td>
+          <td>{{ measurement.height_cm }}cm</td>
+          <td>{{ measurement.weight_kg }}kg</td>
+          <td><b style="color: var(--neon-mint);">{{ measurement.bmi }}</b></td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">아직 저장한 측정 기록이 없어요.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if measurements|length > 5 %}
+  <div style="text-align: center; padding: 12px 0 4px;">
+    <button type="button" id="measureShowMoreBtn" onclick="toggleMeasureRows()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: #94A3B8; font-size: 12px; font-weight: 800; padding: 7px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+      <i class="fa-solid fa-chevron-down" style="margin-right: 5px; font-size: 10px;"></i>더 보기 (총 {{ measurements|length }}건)
+    </button>
+  </div>
+  <script>
+  function toggleMeasureRows() {
+    const hiddenRows = document.querySelectorAll('.measure-row-hidden');
+    const btn = document.getElementById('measureShowMoreBtn');
+    const isHidden = hiddenRows[0] && hiddenRows[0].style.display === 'none';
+    hiddenRows.forEach(row => { row.style.display = isHidden ? '' : 'none'; });
+    btn.innerHTML = isHidden
+      ? '<i class="fa-solid fa-chevron-up" style="margin-right: 5px; font-size: 10px;"></i>접기'
+      : '<i class="fa-solid fa-chevron-down" style="margin-right: 5px; font-size: 10px;"></i>더 보기 (총 {{ measurements|length }}건)';
+  }
+  </script>
+  {% endif %}
+</article>
+
+<script>
+(() => {
+  const h = document.getElementById("id_height_cm");
+  const w = document.getElementById("id_weight_kg");
+  const pref = document.getElementById("id_avatar_preference");
+  const nickname = document.getElementById("id_nickname");
+  const result = document.getElementById("bmiResult");
+  const avatar = document.getElementById("profileAvatar");
+  const label = document.getElementById("previewLabel");
+  if (!h || !w || !pref || !result || !avatar || !label) return;
+
+  function updateBmi() {
+    const height = Number(h.value), weight = Number(w.value);
+    const bmi = weight / Math.pow(height / 100, 2);
+    result.textContent = height > 0 && weight > 0 && Number.isFinite(bmi)
+      ? "BMI 참고 수치: " + bmi.toFixed(1)
+      : "키와 몸무게를 입력하면 BMI 참고 수치가 보여요.";
+  }
+
+  function updateMascot() {
+    const names = {ACTIVE: "백호", MUSCULAR: "포동", SOFT: "토리", BALANCED: "아콩"};
+    const value = Object.hasOwn(names, pref.value) ? pref.value : "ACTIVE";
+    avatar.className = "avatar-roster style-" + value.toLowerCase() + " outfit-{{ profile.equipped_outfit|lower }}";
+    avatar.setAttribute("role", "img");
+    avatar.setAttribute("aria-label", names[value]);
+    label.textContent = document.getElementById("id_nickname").value || "내 캐릭터";
+    const badge = document.getElementById("previewMascotBadge");
+    if (badge) badge.textContent = names[value] + " 파이터";
+  }
+
+  [h, w].forEach(el => el.addEventListener("input", updateBmi));
+  pref.addEventListener("change", () => {
+    updateMascot();
+    if (window.innerWidth <= 850) {
+      const previewPanel = document.querySelector(".preview-panel");
+      if (previewPanel) {
+        const rect = previewPanel.getBoundingClientRect();
+        if (rect.top < 0 || rect.bottom > window.innerHeight) {
+          previewPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }
+    }
+  });
+  nickname.addEventListener("input", updateMascot);
+  updateBmi();
+  updateMascot();
+})();
+</script>
+{% endblock %}

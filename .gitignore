@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3.backup-*
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+env/
+staticfiles/
+media/
+quest_proofs/
+!.env.example
+*.log
+kakao.local.json
+*.local.env
+netfit_gemini.local.env
+netfit_groq.local.env
+
+# Local code backups
+docs/change_history/
